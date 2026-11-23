@@ -20,7 +20,7 @@ For the complete local API field reference, `MD` meter connection string example
 - Discover devices automatically via Zeroconf, or add a device manually by IP address
 - Monitor PV input, grid port power, load port power, battery level, firmware versions, and other real-time data
 - Adjust common settings such as `GS`, `IS`, `MG`, `SI`, `SA`, `SO`, and `PT`
-- Configure Local Mode, `MM` Local Zero Feed-in mode, `MD` local meter connection settings, `LFB` load priority, `LPS` off-grid output, and the `TZ` timezone field
+- Configure Local Mode, `MM` Local Zero Feed-in mode, `MD` Local Meter Data Format, `LFB` load priority, `LPS` off-grid output, and the `TZ` timezone field
 - Restart the device from Home Assistant
 
 ## Installation
@@ -80,6 +80,10 @@ Usage notes:
 - The `Today's PV Generation Energy` (`PD`) sensor requires control module firmware `ES 1.1.4` or later. Older firmware can continue using the integration, but may not report this sensor.
 - After changing a control item, wait for the next polling cycle or read the status again to confirm the final value
 
+### Polling interval
+
+The integration reads the device every 3 seconds by default. The interval can be changed in the integration options from 3 to 60 seconds. Keep the default 3-second interval for Home Assistant control loops such as the zero-feed-in blueprint; a longer interval is suitable for device-local zero feed-in or monitoring, but slows updates of the device SOC, PV, and power entities used by automations.
+
 ## Zero Feed-in Mode Selection
 
 Use only one zero feed-in control path at a time. Mixing the device's local meter control and the Home Assistant blueprint can make the resulting behavior difficult to predict.
@@ -95,7 +99,7 @@ In the SunEnergyXT app, **Smart Strategy - Local Network (WLAN)** is the app-sid
 
 The official Home Assistant blueprint is maintained separately: [SunEnergyXT zero feed-in blueprint](https://github.com/SunEnergyXT/sunenergyxt-500-zero-feed-in-blueprint). When using the blueprint, keep `MM` disabled because the blueprint controls the device from Home Assistant entities instead of using the device's direct local meter-reading path.
 
-To use the device-local path from Home Assistant, open the SunEnergyXT device in Home Assistant and edit the `Local Meter Connection Settings` text entity (`MD`) with the final meter JSON from [API.md](API.md). Then enable `Local Zero Feed-in mode` (`MM`). The `MD` entity is a write field for the device-local meter connection, not a guaranteed readback field; confirm the result through `Meter Status` (`MS`) and live meter behavior.
+To use the device-local path from Home Assistant, open the SunEnergyXT device in Home Assistant and save the final meter JSON from [API.md](API.md) in the `Local Meter Data Format` text entity (`MD`). In the current integration, saving a non-empty `MD` value writes `MD` and enables `Local Zero Feed-in mode` (`MM`) together. Clearing `MD` disables `MM`, while turning `MM` off also clears `MD`. `Local Meter Data Format` is the visible Home Assistant name of the `MD` meter connection field. It is a write field, not a guaranteed readback field; confirm the result through `Meter Status` (`MS`) and live meter behavior.
 
 ## Entity Description
 
@@ -110,7 +114,7 @@ Notes:
 | Entity ID | Name | Unit | Description |
 |-----------|------|------|-------------|
 | `WS` | Wi-Fi SSID | - | Wi-Fi connection diagnostic information |
-| `WR` | Wi-Fi Signal Strength | dB | Current Wi-Fi signal strength |
+| `WR` | Wi-Fi Signal Strength | dBm | Current Wi-Fi signal strength |
 | `ST` | System Status | - | Device running status. Common values: `0 = Shutdown`, `1 = Standby`, `2 = Running`, `3 = Upgrading` |
 | `IW` | System Total Input Power | W | Current total system input power |
 | `OP` | System Total Output Power | W | Current total system output power |
@@ -158,29 +162,33 @@ Notes:
 
 | Entity ID | Name | Unit | Range | Step | Description |
 |-----------|------|------|-------|------|-------------|
-| `GS` | System Grid Port Power Setpoint | W | `-2400` to `2400` | `10` | Grid port power setpoint. A positive value usually means export/feed-in; a negative value usually means grid import or grid charging. The common positive upper limit is `800W` for 500 Standard and `2400W` for 500 Pro |
+| `GS` | System Grid Port Power Setpoint | W | `-2400` to `800` for 500; `-2400` to `2400` for 500 PRO and 500 PRO AC Core | `10` | Grid port power setpoint. Positive values mean export/feed-in; negative values mean grid import or grid charging |
 | `IS` | System Max Inverter Power Setpoint | W | `1` to `2400` | `10` | Maximum inverter output power setpoint |
-| `MG` | Maximum Grid-Connected Output Power | W | `1` to `2400` | `1` | Maximum grid-connected output power. The upper limit is `800W` for 500 Standard and `2400W` for 500 Pro |
+| `MG` | Maximum Grid-Connected Output Power | W | `1` to `800` for 500; `1` to `2400` for 500 PRO and 500 PRO AC Core | `1` | Maximum grid-connected output power |
 | `SI` | System Min Discharge SOC | % | `1` to `30` | `1` | Minimum SOC allowed for discharge in on-grid scenarios |
 | `SA` | System Max Charge SOC | % | `70` to `100` | `1` | Maximum SOC allowed for charge in on-grid scenarios |
+| `SI1` | Discharge SOC Hysteresis (Default: 5%) | % | `0` to `100` | `1` | SOC hysteresis before discharge resumes after the minimum discharge SOC is reached. Default: `5%` |
+| `SA1` | Charge SOC Hysteresis (Default: 5%) | % | `0` to `100` | `1` | SOC hysteresis before charging resumes after the maximum charge SOC is reached. Default: `5%` |
 | `SO` | System Load Port Discharge Limit SOC | % | `1` to `30` | `1` | Minimum SOC allowed for discharge in off-grid / load port scenarios |
 | `PT` | System Auto-Shutdown Time Setting | min | `30` to `1440` | `1` | Auto-shutdown time |
+
+> Changing `SI1` or `SA1` changes device-side SOC control behavior and may affect existing strategies. Keep both values at the default `5%` unless a different hysteresis is specifically required, and restore both values to `5%` after testing or before changing to another strategy.
 
 ### Switch
 
 | Entity ID | Name | Description |
 |-----------|------|-------------|
 | `LM` | Local mode | Local mode switch. When enabled, the device prioritizes local-side configuration |
-| `MM` | Local Zero Feed-in mode | Local zero feed-in mode switch. Prepare a valid `MD` local meter connection setting before enabling it. Turning it off also clears `MD` |
+| `MM` | Local Zero Feed-in mode | Local zero feed-in mode switch. It cannot be enabled while `MD` is empty. Turning it off also clears `MD` |
 | `PM` | System Parallel Mode | Parallel mode switch. Use only when the device topology and firmware support it |
 | `LFB` | Load Priority Switch | Load priority switch |
-| `LPS` | Off-Grid Output Switch | Off-grid output switch |
+| `LPS` | Off-Grid Output Switch | Enables or disables the off-grid output. The device default is enabled |
 
 ### Text
 
 | Entity ID | Name | Description |
 |-----------|------|-------------|
-| `MD` | Local Meter Connection Settings | Local meter connection JSON string for Local Zero Feed-in mode. Fill in the exact final device-side value shown in [API.md](API.md). It takes effect directly, but should not be used as a guaranteed readback field |
+| `MD` | Local Meter Data Format | Local meter connection JSON string for Local Zero Feed-in mode. Saving a non-empty value also enables `MM`; clearing it disables `MM`. Fill in the exact final device-side value shown in [API.md](API.md). It takes effect directly, but should not be used as a guaranteed readback field |
 | `TZ` | System Time Zone | POSIX timezone string. For example, China can use `CST-8`; Germany with DST can use `CET-1CEST,M3.5.0,M10.5.0/3`. It takes effect directly, but should not be used as a guaranteed readback field |
 
 ### Button

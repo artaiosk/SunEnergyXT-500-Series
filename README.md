@@ -20,7 +20,7 @@ Die vollstaendige Referenz der lokalen API, Beispiele fuer `MD`-Zaehlerverbindun
 - Automatische Geraeteerkennung ueber Zeroconf oder manuelles Hinzufuegen per IP-Adresse
 - Ueberwachung von PV-Eingang, Netzanschlussleistung, Lastanschlussleistung, Batteriestand, Firmware-Versionen und weiteren Echtzeitdaten
 - Anpassung haeufig genutzter Einstellungen wie `GS`, `IS`, `MG`, `SI`, `SA`, `SO` und `PT`
-- Konfiguration von lokalem Modus, `MM` Lokaler Nulleinspeisemodus, `MD` lokale Smart-Meter-Verbindung, `LFB` Lastprioritaet, `LPS` Inselausgang und dem Zeitzonenfeld `TZ`
+- Konfiguration von lokalem Modus, `MM` Lokaler Nulleinspeisemodus, `MD` Lokales Zhlerdatenformat, `LFB` Lastprioritaet, `LPS` Inselausgang und dem Zeitzonenfeld `TZ`
 - Neustart des Geraets direkt aus Home Assistant
 
 ## Installation
@@ -80,6 +80,10 @@ Hinweise zur Nutzung:
 - Der Sensor `Heutige PV-Erzeugung` (`PD`) erfordert die Steuerungsmodul-Firmware `ES 1.1.4` oder neuer. Mit aelterer Firmware kann die Integration weiterhin verwendet werden, der Sensor wird jedoch moeglicherweise nicht gemeldet.
 - Nach dem Aendern eines Steuerwerts sollte der finale Zustand durch die naechste Aktualisierung oder ein erneutes Auslesen bestaetigt werden
 
+### Abfrageintervall
+
+Die Integration liest das Geraet standardmaessig alle 3 Sekunden aus. Das Intervall kann in den Integrationseinstellungen zwischen 3 und 60 Sekunden geaendert werden. Fuer Home-Assistant-Regelkreise wie die Nulleinspeisungs-Blueprint sollten die standardmaessigen 3 Sekunden beibehalten werden. Ein laengeres Intervall eignet sich fuer den geraeteinternen lokalen Nulleinspeisemodus oder Monitoring, verlangsamt aber die Aktualisierung von SOC-, PV- und Leistungsentitaeten, die von Automatisierungen verwendet werden.
+
 ## Auswahl des Nulleinspeisungsmodus
 
 Verwenden Sie immer nur einen Regelpfad fuer Nulleinspeisung gleichzeitig. Wenn geraeteinterner lokaler Modus und Home-Assistant-Blueprint gleichzeitig gemischt werden, ist das resultierende Verhalten schwer vorhersehbar.
@@ -95,7 +99,7 @@ In der SunEnergyXT App ist **Smarte Strategie - Lokales Netzwerk (WLAN)** der Ap
 
 Die offizielle Home-Assistant-Blueprint wird separat gepflegt: [SunEnergyXT Nulleinspeisungs-Blueprint](https://github.com/SunEnergyXT/sunenergyxt-500-zero-feed-in-blueprint). Wenn diese Blueprint verwendet wird, sollte `MM` deaktiviert bleiben, weil die Blueprint das Geraet ueber Home-Assistant-Entitaeten steuert und nicht den direkten lokalen Zaehlerlesepfad des Geraets nutzt.
 
-Um den geraeteinternen lokalen Pfad aus Home Assistant zu verwenden, oeffnen Sie das SunEnergyXT-Geraet in Home Assistant und bearbeiten Sie die Textentitaet `Lokale Smart-Meter-Verbindung` (`MD`) mit dem finalen Zaehler-JSON aus [API.md](API.md). Aktivieren Sie danach `Lokaler Nulleinspeisemodus` (`MM`). Die `MD`-Entitaet ist ein Schreibfeld fuer die geraeteinterne lokale Zaehlerverbindung, aber kein garantiertes Ruecklesefeld. Bestaetigen Sie das Ergebnis ueber `Zaehlerstatus` (`MS`) und das reale Zaehlerverhalten.
+Um den geraeteinternen lokalen Pfad aus Home Assistant zu verwenden, oeffnen Sie das SunEnergyXT-Geraet in Home Assistant und speichern Sie das finale Zaehler-JSON aus [API.md](API.md) in der Textentitaet `Lokales Zhlerdatenformat` (`MD`). In der aktuellen Integration wird beim Speichern eines nicht leeren `MD`-Werts `MD` geschrieben und `Lokaler Nulleinspeisemodus` (`MM`) gleichzeitig aktiviert. Das Leeren von `MD` deaktiviert `MM`; das Ausschalten von `MM` leert zugleich `MD`. `Lokales Zhlerdatenformat` ist der in Home Assistant sichtbare Name des Feldes fuer die lokale Smart-Meter-Verbindung `MD`. `MD` ist ein Schreibfeld und kein garantiertes Ruecklesefeld. Bestaetigen Sie das Ergebnis ueber `Zaehlerstatus` (`MS`) und das reale Zaehlerverhalten.
 
 ## Entitaetsbeschreibung
 
@@ -110,7 +114,7 @@ Hinweise:
 | Entitaets-ID | Name | Einheit | Beschreibung |
 |--------------|------|---------|--------------|
 | `WS` | WLAN-SSID | - | Diagnoseinformationen zur WLAN-Verbindung |
-| `WR` | WLAN-Signalstaerke | dB | Aktuelle WLAN-Signalstaerke |
+| `WR` | WLAN-Signalstaerke | dBm | Aktuelle WLAN-Signalstaerke |
 | `ST` | Systemstatus | - | Betriebsstatus des Geraets. Hauefige Werte: `0 = Abgeschaltet`, `1 = Standby`, `2 = In Betrieb`, `3 = Upgrade` |
 | `IW` | Gesamteingangsleistung des Systems | W | Aktuelle gesamte Eingangsleistung des Systems |
 | `OP` | Gesamtausgangsleistung des Systems | W | Aktuelle gesamte Ausgangsleistung des Systems |
@@ -158,29 +162,33 @@ Hinweise:
 
 | Entitaets-ID | Name | Einheit | Bereich | Schritt | Beschreibung |
 |--------------|------|---------|---------|----------|--------------|
-| `GS` | Sollwert Leistung Netzanschluss | W | `-2400` bis `2400` | `10` | Sollwert fuer die Leistung am Netzanschluss. Positive Werte bedeuten in der Regel Einspeisung, negative Werte in der Regel Netzbezug oder Netzladen. Die uebliche obere positive Grenze ist `800W` fuer SunEnergyXT 500 und `2400W` fuer SunEnergyXT 500 Pro |
+| `GS` | Sollwert Leistung Netzanschluss | W | `-2400` bis `800` fuer 500; `-2400` bis `2400` fuer 500 PRO und 500 PRO AC Core | `10` | Sollwert fuer die Leistung am Netzanschluss. Positive Werte bedeuten Einspeisung, negative Werte Netzbezug oder Netzladen |
 | `IS` | Sollwert max. Wechselrichterleistung | W | `1` bis `2400` | `10` | Sollwert fuer die maximale Wechselrichter-Ausgangsleistung |
-| `MG` | Maximale netzgekoppelte Ausgangsleistung | W | `1` bis `2400` | `1` | Maximale netzgekoppelte Ausgangsleistung. Die Obergrenze liegt bei `800W` fuer SunEnergyXT 500 und `2400W` fuer SunEnergyXT 500 Pro |
+| `MG` | Maximale netzgekoppelte Ausgangsleistung | W | `1` bis `800` fuer 500; `1` bis `2400` fuer 500 PRO und 500 PRO AC Core | `1` | Maximale netzgekoppelte Ausgangsleistung |
 | `SI` | System Entladegrenze | % | `1` bis `30` | `1` | Minimaler SOC fuer Entladung im On-Grid-Betrieb |
 | `SA` | System Ladegrenze | % | `70` bis `100` | `1` | Maximaler SOC fuer Ladung im On-Grid-Betrieb |
+| `SI1` | Entlade-SOC-Hysterese (Standard: 5 %) | % | `0` bis `100` | `1` | SOC-Hysterese, bevor die Entladung nach Erreichen der Entladegrenze wieder freigegeben wird. Standard: `5 %` |
+| `SA1` | Lade-SOC-Hysterese (Standard: 5 %) | % | `0` bis `100` | `1` | SOC-Hysterese, bevor das Laden nach Erreichen der Ladegrenze wieder freigegeben wird. Standard: `5 %` |
 | `SO` | Systemlastanschluss-Entladegrenze | % | `1` bis `30` | `1` | Minimaler SOC fuer Entladung im Off-Grid- bzw. Lastanschluss-Betrieb |
 | `PT` | Einstellung der automatischen Abschaltzeit | min | `30` bis `1440` | `1` | Zeit fuer die automatische Abschaltung |
+
+> Eine Aenderung von `SI1` oder `SA1` veraendert das geraeteseitige SOC-Regelverhalten und kann bestehende Strategien beeinflussen. Belassen Sie beide Werte beim Standardwert `5 %`, sofern keine andere Hysterese erforderlich ist. Stellen Sie beide Werte nach einem Test oder vor dem Wechsel zu einer anderen Strategie wieder auf `5 %` zurueck.
 
 ### Switch
 
 | Entitaets-ID | Name | Beschreibung |
 |--------------|------|--------------|
 | `LM` | Lokaler Modus | Schalter fuer den lokalen Modus. Wenn aktiv, priorisiert das Geraet die lokale Konfiguration |
-| `MM` | Lokaler Nulleinspeisemodus | Schalter fuer den Modus "Lokaler Nulleinspeisemodus". Vor dem Aktivieren sollte eine gueltige `MD`-Smart-Meter-Verbindung hinterlegt werden. Beim Ausschalten wird `MD` ebenfalls geleert |
+| `MM` | Lokaler Nulleinspeisemodus | Schalter fuer den Modus "Lokaler Nulleinspeisemodus". Solange `MD` leer ist, kann der Schalter nicht aktiviert werden. Beim Ausschalten wird `MD` ebenfalls geleert |
 | `PM` | Parallelschaltmodus des Systems | Schalter fuer den Parallelbetrieb. Nur verwenden, wenn Geraetetopologie und Firmware dies unterstuetzen |
 | `LFB` | Schalter fuer Lastprioritaet | Schalter fuer Lastprioritaet |
-| `LPS` | Schalter fuer den Inselausgang | Schalter fuer den Inselausgang |
+| `LPS` | Schalter fuer den Inselausgang | Aktiviert oder deaktiviert den Inselausgang. Der Standardwert des Geraets ist aktiviert |
 
 ### Text
 
 | Entitaets-ID | Name | Beschreibung |
 |--------------|------|--------------|
-| `MD` | Lokale Smart-Meter-Verbindung | JSON-Zeichenkette fuer die lokale Smart-Meter-Verbindung im Modus "Lokaler Nulleinspeisemodus". Es muss exakt der finale geraeteseitige Wert aus [API.md](API.md) verwendet werden. Die Einstellung wirkt direkt, ist aber kein garantiertes Ruecklesefeld |
+| `MD` | Lokales Zhlerdatenformat | JSON-Zeichenkette fuer die lokale Smart-Meter-Verbindung im Modus "Lokaler Nulleinspeisemodus". Ein nicht leerer Wert aktiviert zugleich `MM`; das Leeren deaktiviert `MM`. Es muss exakt der finale geraeteseitige Wert aus [API.md](API.md) verwendet werden. Die Einstellung wirkt direkt, ist aber kein garantiertes Ruecklesefeld |
 | `TZ` | Systemzeitzone | POSIX-Zeitzonenstring. Fuer China kann z. B. `CST-8` verwendet werden; fuer Deutschland mit Sommerzeit z. B. `CET-1CEST,M3.5.0,M10.5.0/3`. Die Einstellung wirkt direkt, ist aber kein garantiertes Ruecklesefeld |
 
 ### Button
