@@ -21,7 +21,7 @@ from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -36,14 +36,13 @@ NUMBER_META: dict[str, dict[str, Any]] = {
         "max_value": 2400,
         "step": 10,
         "unit": "W",
-        "icon": "mdi:transmission-tower",
     },
     "IS": {
         "min_value": 1,
         "max_value": 2400,
         "step": 10,
         "unit": "W",
-        "icon": "mdi:flash",
+        "icon": "mdi:flash-triangle-outline",
     },
     "SI": {
         "min_value": 1,
@@ -78,7 +77,7 @@ NUMBER_META: dict[str, dict[str, Any]] = {
         "max_value": 30,
         "step": 1,
         "unit": "%",
-        "icon": "mdi:battery-arrow-down-outline",
+        "icon": "mdi:battery-low",
     },
     "PT": {
         "min_value": 30,
@@ -86,13 +85,14 @@ NUMBER_META: dict[str, dict[str, Any]] = {
         "step": 1,
         "unit": "min",
         "icon": "mdi:timer-outline",
+        "entity_category": EntityCategory.CONFIG,
     },
     "MG": {
         "min_value": 1,
         "max_value": 2400,
-        "step": 1,
+        "step": 10,
         "unit": "W",
-        "icon": "mdi:flash",
+        "icon": "mdi:transmission-tower",
     },
 }
 
@@ -230,6 +230,10 @@ class SunlitNumber(CoordinatorEntity[SunlitDataUpdateCoordinator], NumberEntity)
         icon = meta.get("icon")
         if icon:
             self._attr_icon = icon
+
+        entity_category = meta.get("entity_category")
+        if entity_category:
+            self._attr_entity_category = entity_category
 
     @property
     def native_value(self) -> float:
