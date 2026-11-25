@@ -20,7 +20,7 @@ from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -32,7 +32,8 @@ _LOGGER = logging.getLogger(__name__)
 SWITCH_META: dict[str, dict[str, Any]] = {
     "LM": {
         "device_class": SwitchDeviceClass.OUTLET,
-        "icon": "mdi:lan",
+        "entity_category": EntityCategory.CONFIG,
+        "icon": "mdi:cloud-off-outline",
     },
     "MM": {
         "device_class": SwitchDeviceClass.OUTLET,
@@ -40,15 +41,15 @@ SWITCH_META: dict[str, dict[str, Any]] = {
     },
     "PM": {
         "device_class": SwitchDeviceClass.OUTLET,
-        "icon": "mdi:link-variant",
+        "icon": "mdi:multicast",
     },
     "LFB": {
         "device_class": SwitchDeviceClass.OUTLET,
-        "icon": "mdi:link-variant",
+        "icon": "mdi:home-lightning-bolt-outline",
     },
     "LPS": {
         "device_class": SwitchDeviceClass.OUTLET,
-        "icon": "mdi:link-variant",
+        "icon": "mdi:generator-stationary",
     },
 }
 
@@ -159,6 +160,10 @@ class SunlitSwitch(CoordinatorEntity[SunlitDataUpdateCoordinator], SwitchEntity)
         icon = meta.get("icon")
         if icon:
             self._attr_icon = icon
+
+        entity_category = meta.get("entity_category")
+        if entity_category:
+            self._attr_entity_category = entity_category
 
     @property
     def is_on(self) -> bool:
