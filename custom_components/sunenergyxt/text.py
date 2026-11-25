@@ -22,7 +22,7 @@ from homeassistant.components.text import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -37,6 +37,7 @@ TEXT_META: dict[str, dict[str, Any]] = {
     },
     "TZ": {
         "icon": "mdi:map-clock-outline",
+        "entity_category": EntityCategory.CONFIG,
     },
 }
 
@@ -140,6 +141,10 @@ class SunlitText(CoordinatorEntity[SunlitDataUpdateCoordinator], TextEntity):
         icon = meta.get("icon")
         if icon:
             self._attr_icon = icon
+
+        entity_category = meta.get("entity_category")
+        if entity_category:
+            self._attr_entity_category = entity_category
 
     @property
     def native_value(self) -> str:
