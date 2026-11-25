@@ -1,0 +1,63 @@
+{
+  "entity": {
+    "number": {
+      "gs": {
+        "default": "mdi:lightning-bolt-outline",
+        "range": {
+          "-10000": "mdi:lightning-bolt-outline",
+          "0": "mdi:lightning-bolt-outline",
+          "1": "mdi:lightning-bolt"
+        }
+      }
+    },
+    "sensor": {
+      "wr": {
+        "default": "mdi:wifi-strength-2",
+        "range": {
+          "-100": "mdi:wifi-strength-outline",
+          "-87": "mdi:wifi-strength-1",
+          "-75": "mdi:wifi-strength-2",
+          "-67": "mdi:wifi-strength-3",
+          "-50": "mdi:wifi-strength-4"
+        }
+      },
+      "iw": {
+        "default": "mdi:arrow-bottom-right-bold-box",
+        "range": {
+          "0": "mdi:arrow-bottom-right-bold-box-outline",
+          "1": "mdi:arrow-bottom-right-bold-box"
+        }
+      },
+      "op": {
+        "default": "mdi:arrow-top-left-bold-box",
+        "range": {
+          "0": "mdi:arrow-top-left-bold-box-outline",
+          "1": "mdi:arrow-top-left-bold-box"
+        }
+      },
+      "gp": {
+        "default": "mdi:transmission-tower",
+        "range": {
+          "-10000": "mdi:transmission-tower-export",
+          "0": "mdi:transmission-tower",
+          "1": "mdi:transmission-tower-import"
+        }
+      },
+      "lp": {
+        "default": "mdi:home-lightning-bolt-outline",
+        "range": {
+          "0": "mdi:home-lightning-bolt-outline",
+          "1": "mdi:home-lightning-bolt"
+        }
+      },
+      "bp": {
+        "default": "mdi:battery",
+        "range": {
+          "-10000": "mdi:battery-arrow-down",
+          "0": "mdi:battery",
+          "1": "mdi:battery-charging"
+        }
+      }
+    }
+  }
+}
